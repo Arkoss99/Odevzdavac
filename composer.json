@@ -1,0 +1,9 @@
+{
+    "name": "skola/odevzdavani-praci",
+    "description": "Webová aplikace pro odevzdávání prací s e-mailovou notifikací.",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "phpmailer/phpmailer": "^6.9"
+    }
+}
