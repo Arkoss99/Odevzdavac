@@ -82,7 +82,13 @@ class SubmissionHandler
         $photoPaths = array_map(fn($f) => $this->store($f), $photos);
         $filePaths  = array_map(fn($f) => $this->store($f), $attachments);
 
-        $driveLinks = $this->uploadToDrive(array_merge([$coverPath], $photoPaths, $filePaths));
+        $driveError = null;
+        try {
+            $driveLinks = $this->uploadToDrive(array_merge([$coverPath], $photoPaths, $filePaths));
+        } catch (\RuntimeException $e) {
+            $driveLinks = [];
+            $driveError = $e->getMessage();
+        }
 
         $payload = [
             'sender_email'    => $senderEmail,
@@ -103,7 +109,7 @@ class SubmissionHandler
             return ['ok' => false, 'errors' => ['email' => $e->getMessage()]];
         }
 
-        return ['ok' => true, 'message' => 'Práce byla odeslána. Potvrzení dorazilo na oba e-maily.'];
+        return ['ok' => true, 'message' => 'Odesláno.', 'drive_error' => $driveError];
     }
 
     private function uploadToDrive(array $storedFiles): array
@@ -117,7 +123,7 @@ class SubmissionHandler
             require_once __DIR__ . '/DriveUploader.php';
             $drive = new DriveUploader($driveConfig['credentials_json'], $driveConfig['folder_id']);
         } catch (\Throwable $e) {
-            return [];
+            throw new \RuntimeException('Drive auth error: ' . $e->getMessage());
         }
 
         $finfo = new finfo(FILEINFO_MIME_TYPE);
@@ -131,7 +137,7 @@ class SubmissionHandler
                     'url'  => $drive->upload($stored['path'], $stored['name'], $mime),
                 ];
             } catch (\Throwable $e) {
-                // pokud upload jednoho souboru selže, pokračuj dál
+                throw new \RuntimeException('Drive upload error (' . $stored['name'] . '): ' . $e->getMessage());
             }
         }
 
