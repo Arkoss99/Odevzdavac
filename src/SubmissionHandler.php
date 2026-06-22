@@ -104,7 +104,7 @@ class SubmissionHandler
         try {
             $this->sendNotifications($payload);
         } catch (Exception $e) {
-            return ['ok' => false, 'errors' => ['email' => 'E-mail se nepodařilo odeslat. Zkontroluj nastavení SMTP v src/config.php.']];
+            return ['ok' => false, 'errors' => ['email' => $e->getMessage()]];
         }
 
         return ['ok' => true, 'message' => 'Práce byla odeslána. Potvrzení dorazilo na oba e-maily.'];
