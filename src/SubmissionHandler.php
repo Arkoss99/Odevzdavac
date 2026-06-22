@@ -157,6 +157,7 @@ class SubmissionHandler
             $m->SMTPSecure = $smtp['secure'] === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
             $m->Port = (int) $smtp['port'];
             $m->CharSet = 'UTF-8';
+            $m->Timeout = 15;
 
             $m->setFrom($mail['from_address'], $mail['from_name']);
             $m->addReplyTo($p['sender_email'], $p['autor']);
