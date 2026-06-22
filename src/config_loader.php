@@ -7,13 +7,7 @@ if (is_file($configFile)) {
 }
 
 return [
-    'smtp' => [
-        'host'   => getenv('SMTP_HOST')   ?: 'smtp-relay.brevo.com',
-        'port'   => (int)(getenv('SMTP_PORT') ?: 587),
-        'secure' => getenv('SMTP_SECURE') ?: 'tls',
-        'user'   => getenv('SMTP_USER')   ?: '',
-        'pass'   => getenv('SMTP_PASS')   ?: '',
-    ],
+    'brevo_api_key' => getenv('BREVO_API_KEY') ?: '',
     'mail' => [
         'from_name'    => getenv('MAIL_FROM_NAME')    ?: 'Odevzdávání prací',
         'from_address' => getenv('MAIL_FROM_ADDRESS') ?: '',

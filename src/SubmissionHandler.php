@@ -1,9 +1,5 @@
 <?php
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
 class SubmissionHandler
 {
     private array $config;
@@ -103,7 +99,7 @@ class SubmissionHandler
 
         try {
             $this->sendNotifications($payload);
-        } catch (Exception $e) {
+        } catch (\RuntimeException $e) {
             return ['ok' => false, 'errors' => ['email' => $e->getMessage()]];
         }
 
@@ -144,39 +140,52 @@ class SubmissionHandler
 
     private function sendNotifications(array $p): void
     {
-        $smtp = $this->config['smtp'];
+        $apiKey = $this->config['brevo_api_key'] ?? '';
+        if (empty($apiKey)) {
+            throw new \RuntimeException('Brevo API klíč není nastaven (BREVO_API_KEY).');
+        }
+
         $mail = $this->config['mail'];
 
+        $attachments = [];
+        $allFiles = array_merge([$p['cover']], $p['photos'], $p['files']);
+        foreach ($allFiles as $f) {
+            $attachments[] = [
+                'name'    => $f['name'],
+                'content' => base64_encode(file_get_contents($f['path'])),
+            ];
+        }
+
         foreach ([$p['sender_email'], $p['recipient_email']] as $to) {
-            $m = new PHPMailer(true);
-            $m->isSMTP();
-            $m->Host = $smtp['host'];
-            $m->SMTPAuth = true;
-            $m->Username = $smtp['user'];
-            $m->Password = $smtp['pass'];
-            $m->SMTPSecure = $smtp['secure'] === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
-            $m->Port = (int) $smtp['port'];
-            $m->CharSet = 'UTF-8';
-            $m->Timeout = 15;
+            $payload = [
+                'sender'      => ['name' => $mail['from_name'], 'email' => $mail['from_address']],
+                'to'          => [['email' => $to]],
+                'replyTo'     => ['email' => $p['sender_email'], 'name' => $p['autor']],
+                'subject'     => 'Nová práce: ' . $p['nazev'],
+                'htmlContent' => $this->buildHtml($p),
+                'textContent' => $this->buildText($p),
+                'attachment'  => $attachments,
+            ];
 
-            $m->setFrom($mail['from_address'], $mail['from_name']);
-            $m->addReplyTo($p['sender_email'], $p['autor']);
-            $m->addAddress($to);
-            $m->Subject = 'Nová práce: ' . $p['nazev'];
+            $ch = curl_init('https://api.brevo.com/v3/smtp/email');
+            curl_setopt_array($ch, [
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => json_encode($payload),
+                CURLOPT_HTTPHEADER     => [
+                    'api-key: ' . $apiKey,
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                ],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 20,
+            ]);
+            $response = curl_exec($ch);
+            $code     = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
 
-            $m->addAttachment($p['cover']['path'], $p['cover']['name']);
-            foreach ($p['photos'] as $ph) {
-                $m->addAttachment($ph['path'], $ph['name']);
+            if ($code < 200 || $code >= 300) {
+                throw new \RuntimeException('Brevo API chyba (' . $code . '): ' . $response);
             }
-            foreach ($p['files'] as $f) {
-                $m->addAttachment($f['path'], $f['name']);
-            }
-
-            $m->isHTML(true);
-            $m->Body = $this->buildHtml($p);
-            $m->AltBody = $this->buildText($p);
-
-            $m->send();
         }
     }
 

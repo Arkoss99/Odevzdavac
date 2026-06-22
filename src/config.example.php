@@ -1,13 +1,7 @@
 <?php
 
 return [
-    'smtp' => [
-        'host'   => 'smtp-relay.brevo.com',
-        'port'   => 587,
-        'secure' => 'tls',
-        'user'   => 'tvuj-brevo-login@smtp-brevo.com',
-        'pass'   => 'tvuj-brevo-smtp-key',
-    ],
+    'brevo_api_key' => 'tvuj-brevo-api-klic',
 
     'mail' => [
         'from_name'    => 'Odevzdávání prací',
