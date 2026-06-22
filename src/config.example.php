@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'brevo_api_key' => 'tvuj-brevo-api-klic',
+    'brevo_api_key' => 'tvuj-brevo-api-klic', // api klic z brevo
 
     'mail' => [
         'from_name'    => 'Odevzdávání prací',
