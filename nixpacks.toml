@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = [
+  "php83",
+  "php83Extensions.curl",
+  "php83Extensions.mbstring",
+  "php83Extensions.fileinfo",
+  "php83Extensions.openssl",
+]

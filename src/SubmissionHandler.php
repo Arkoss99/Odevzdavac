@@ -117,10 +117,15 @@ class SubmissionHandler
             return [];
         }
 
-        require_once __DIR__ . '/DriveUploader.php';
-        $drive  = new DriveUploader($driveConfig['credentials_json'], $driveConfig['folder_id']);
-        $finfo  = new finfo(FILEINFO_MIME_TYPE);
-        $links  = [];
+        try {
+            require_once __DIR__ . '/DriveUploader.php';
+            $drive = new DriveUploader($driveConfig['credentials_json'], $driveConfig['folder_id']);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $links = [];
 
         foreach ($storedFiles as $stored) {
             try {
@@ -129,7 +134,7 @@ class SubmissionHandler
                     'name' => $stored['name'],
                     'url'  => $drive->upload($stored['path'], $stored['name'], $mime),
                 ];
-            } catch (RuntimeException) {
+            } catch (\Throwable $e) {
                 // pokud upload jednoho souboru selže, pokračuj dál
             }
         }
