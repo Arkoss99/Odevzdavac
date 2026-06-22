@@ -26,7 +26,7 @@ class DriveUploader
             . $fileContent . "\r\n"
             . "--{$boundary}--";
 
-        $ch = curl_init('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink');
+        $ch = curl_init('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink&supportsAllDrives=true');
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => $body,
@@ -51,7 +51,7 @@ class DriveUploader
 
     private function makePublic(string $fileId): void
     {
-        $ch = curl_init("https://www.googleapis.com/drive/v3/files/{$fileId}/permissions");
+        $ch = curl_init("https://www.googleapis.com/drive/v3/files/{$fileId}/permissions?supportsAllDrives=true");
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => json_encode(['type' => 'anyone', 'role' => 'reader']),
