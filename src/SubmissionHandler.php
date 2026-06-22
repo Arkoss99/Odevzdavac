@@ -82,20 +82,23 @@ class SubmissionHandler
             return ['ok' => false, 'errors' => $this->errors];
         }
 
-        $coverPath = $this->store($cover);
+        $coverPath  = $this->store($cover);
         $photoPaths = array_map(fn($f) => $this->store($f), $photos);
-        $filePaths = array_map(fn($f) => $this->store($f), $attachments);
+        $filePaths  = array_map(fn($f) => $this->store($f), $attachments);
+
+        $driveLinks = $this->uploadToDrive(array_merge([$coverPath], $photoPaths, $filePaths));
 
         $payload = [
             'sender_email'    => $senderEmail,
             'recipient_email' => $recipientEmail,
-            'nazev'  => $nazev,
-            'autor'  => $autor,
-            'popis'  => $popis,
-            'cover'  => $coverPath,
-            'photos' => $photoPaths,
-            'files'  => $filePaths,
-            'time'   => date('j. n. Y H:i'),
+            'nazev'       => $nazev,
+            'autor'       => $autor,
+            'popis'       => $popis,
+            'cover'       => $coverPath,
+            'photos'      => $photoPaths,
+            'files'       => $filePaths,
+            'drive_links' => $driveLinks,
+            'time'        => date('j. n. Y H:i'),
         ];
 
         try {
@@ -105,6 +108,33 @@ class SubmissionHandler
         }
 
         return ['ok' => true, 'message' => 'Práce byla odeslána. Potvrzení dorazilo na oba e-maily.'];
+    }
+
+    private function uploadToDrive(array $storedFiles): array
+    {
+        $driveConfig = $this->config['drive'] ?? [];
+        if (empty($driveConfig['credentials_json']) || empty($driveConfig['folder_id'])) {
+            return [];
+        }
+
+        require_once __DIR__ . '/DriveUploader.php';
+        $drive  = new DriveUploader($driveConfig['credentials_json'], $driveConfig['folder_id']);
+        $finfo  = new finfo(FILEINFO_MIME_TYPE);
+        $links  = [];
+
+        foreach ($storedFiles as $stored) {
+            try {
+                $mime    = $finfo->file($stored['path']);
+                $links[] = [
+                    'name' => $stored['name'],
+                    'url'  => $drive->upload($stored['path'], $stored['name'], $mime),
+                ];
+            } catch (RuntimeException) {
+                // pokud upload jednoho souboru selže, pokračuj dál
+            }
+        }
+
+        return $links;
     }
 
     private function sendNotifications(array $p): void
@@ -172,13 +202,30 @@ class SubmissionHandler
             . '<tr><td style="padding:8px 0;color:#6b7280;vertical-align:top;">Přiložené soubory (' . $fileCount . ')</td><td style="padding:8px 0;"><ul style="margin:0;padding-left:18px;">' . $fileList . '</ul></td></tr>'
             . '<tr><td style="padding:8px 0;color:#6b7280;">Odesláno</td><td style="padding:8px 0;">' . $e($p['time']) . '</td></tr>'
             . '</table>'
+            . $this->buildDriveLinksHtml($p['drive_links'])
             . '<p style="font-size:12px;color:#9ca3af;margin-top:18px;">Titulní fotka a všechny soubory jsou v příloze tohoto e-mailu.</p>'
             . '</div></div>';
     }
 
+    private function buildDriveLinksHtml(array $links): string
+    {
+        if (empty($links)) {
+            return '';
+        }
+        $e    = fn($s) => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+        $rows = '';
+        foreach ($links as $l) {
+            $rows .= '<li style="margin:4px 0;"><a href="' . $e($l['url']) . '" style="color:#4f46e5;">' . $e($l['name']) . '</a></li>';
+        }
+        return '<div style="margin-top:18px;padding:16px 20px;background:#f5f5ff;border-radius:10px;">'
+            . '<div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4f46e5;margin-bottom:8px;">Google Disk</div>'
+            . '<ul style="margin:0;padding-left:18px;font-size:13px;">' . $rows . '</ul>'
+            . '</div>';
+    }
+
     private function buildText(array $p): string
     {
-        return "Nová odevzdaná práce\n\n"
+        $text = "Nová odevzdaná práce\n\n"
             . "Název: {$p['nazev']}\n"
             . "Autor: {$p['autor']}\n"
             . "E-mail: {$p['sender_email']}\n"
@@ -186,6 +233,15 @@ class SubmissionHandler
             . 'Fotky v galerii: ' . count($p['photos']) . "\n"
             . 'Přiložené soubory: ' . count($p['files']) . "\n"
             . "Odesláno: {$p['time']}\n";
+
+        if (!empty($p['drive_links'])) {
+            $text .= "\nGoogle Disk:\n";
+            foreach ($p['drive_links'] as $l) {
+                $text .= "- {$l['name']}: {$l['url']}\n";
+            }
+        }
+
+        return $text;
     }
 
     private function cleanText(string $value, int $max = 1000): string

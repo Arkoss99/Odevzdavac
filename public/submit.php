@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$config = require __DIR__ . '/../src/config.php';
+$config = require __DIR__ . '/../src/config_loader.php';
 require __DIR__ . '/../src/bootstrap.php';
 require __DIR__ . '/../src/SubmissionHandler.php';
 
