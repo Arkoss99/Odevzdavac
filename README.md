@@ -1,5 +1,7 @@
 # Odevzdávač
 
+## https://web-production-c4f1e.up.railway.app/
+
 Webová aplikace pro odevzdávání prací přes formulář. Vyplníš údaje, nahraješ soubory a odešleš — příjemci přijde email s přílohami. Volitelně se soubory nahrají i na Google Disk.
 
 ## Jak spustit
@@ -49,10 +51,6 @@ Pokud chceš aby se soubory automaticky nahrávaly na Google Disk:
 
 ## Hosting (Railway)
 
-1. Nahraj projekt na GitHub
-2. Na [railway.app](https://railway.app) vytvoř nový projekt z GitHub repozitáře
-3. Nastav environment variables:
-
 | Proměnná | Hodnota |
 |---|---|
 | `BREVO_API_KEY` | API klíč z Brevo |
@@ -61,4 +59,3 @@ Pokud chceš aby se soubory automaticky nahrávaly na Google Disk:
 | `DRIVE_FOLDER_ID` | ID Sdílené složky na Google Disku |
 | `GOOGLE_CREDENTIALS_JSON` | celý obsah `credentials.json` |
 
-4. Railway nasadí aplikaci automaticky při každém `git push`
