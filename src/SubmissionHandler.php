@@ -84,7 +84,7 @@ class SubmissionHandler
 
         $driveError = null;
         try {
-            $driveLinks = $this->uploadToDrive(array_merge([$coverPath], $photoPaths, $filePaths));
+            $driveLinks = $this->uploadToDrive(array_merge([$coverPath], $photoPaths, $filePaths), $autor, $nazev);
         } catch (\RuntimeException $e) {
             $driveLinks = [];
             $driveError = $e->getMessage();
@@ -112,7 +112,7 @@ class SubmissionHandler
         return ['ok' => true, 'message' => 'Odesláno.', 'drive_error' => $driveError];
     }
 
-    private function uploadToDrive(array $storedFiles): array
+    private function uploadToDrive(array $storedFiles, string $autor, string $nazev): array
     {
         $driveConfig = $this->config['drive'] ?? [];
         if (empty($driveConfig['credentials_json']) || empty($driveConfig['folder_id'])) {
@@ -126,6 +126,9 @@ class SubmissionHandler
             throw new \RuntimeException('Drive auth error: ' . $e->getMessage());
         }
 
+        $folderName = $autor . '-' . $nazev;
+        $subFolderId = $drive->createFolder($folderName);
+
         $finfo = new finfo(FILEINFO_MIME_TYPE);
         $links = [];
 
@@ -134,7 +137,7 @@ class SubmissionHandler
                 $mime    = $finfo->file($stored['path']);
                 $links[] = [
                     'name' => $stored['name'],
-                    'url'  => $drive->upload($stored['path'], $stored['name'], $mime),
+                    'url'  => $drive->upload($stored['path'], $stored['name'], $mime, $subFolderId),
                 ];
             } catch (\Throwable $e) {
                 throw new \RuntimeException('Drive upload error (' . $stored['name'] . '): ' . $e->getMessage());

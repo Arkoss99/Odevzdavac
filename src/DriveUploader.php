@@ -12,9 +12,38 @@ class DriveUploader
         $this->accessToken = $this->getAccessToken($creds);
     }
 
-    public function upload(string $filePath, string $fileName, string $mimeType): string
+    public function createFolder(string $name): string
     {
-        $metadata    = json_encode(['name' => $fileName, 'parents' => [$this->folderId]]);
+        $metadata = json_encode([
+            'name'     => $name,
+            'mimeType' => 'application/vnd.google-apps.folder',
+            'parents'  => [$this->folderId],
+        ]);
+
+        $ch = curl_init('https://www.googleapis.com/drive/v3/files?supportsAllDrives=true&fields=id');
+        curl_setopt_array($ch, [
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $metadata,
+            CURLOPT_HTTPHEADER     => [
+                "Authorization: Bearer {$this->accessToken}",
+                'Content-Type: application/json',
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+        ]);
+        $response = json_decode(curl_exec($ch), true);
+        curl_close($ch);
+
+        if (empty($response['id'])) {
+            throw new RuntimeException('Drive folder creation failed: ' . json_encode($response));
+        }
+
+        return $response['id'];
+    }
+
+    public function upload(string $filePath, string $fileName, string $mimeType, string $parentId = ''): string
+    {
+        $parent   = $parentId ?: $this->folderId;
+        $metadata = json_encode(['name' => $fileName, 'parents' => [$parent]]);
         $fileContent = file_get_contents($filePath);
         $boundary    = 'boundary_' . bin2hex(random_bytes(8));
 
